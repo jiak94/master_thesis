@@ -1,0 +1,146 @@
+\chapter{EXPERIMENTAL EVALUATION}%Titles must be capitalized.
+
+In this chapter, the evaluation of the implementation will be provided. There are total three parts of the evaluation. First, exploration time for an application with the asynchronous mode comparing to synchronous mode. Second, the number of counterexamples generate by solver with the shared-cache solver. Third, with the help of the shared-cache solver, the time reduce for analysis the some applications using DFS (depth-fist-search) strategy.
+
+\section{Exploration Time}
+
+In this section, I will compare the exploration time for some application from GNU \texttt{COREUTILS}. KLEE will explore 20,000 paths for that application. If the application does not have 20,000 paths, then find all the feasible paths for the application. Each of the application will be run ten times. Table \ref{result_compare} shows the result of this experiment. This experiment is running on an Amazon Web Service's \texttt{t2.xlarge} machine, with four virtual CPUs and 16 gigabytes of RAM. The CPU's clock speed is up to 3.0 GHz. 
+
+Snippet \ref{symbolic_arguments} is the symbolic arguments using for KLEE in this experiment \cite{Cadar:2008:KUA:1855741.1855756}. \texttt{posix-runtime} was enabled for making the command line arguments of the target binary symbolic.
+
+\begin{spacing}{1}
+{
+\begin{lstlisting}[frame=shadowbox, caption={Symbolic Arguments},label={symbolic_arguments}]
+--posix-runtime
+--libc=uclibc
+--search=dfs
+--sym-args 0 1 10
+--sym-args 0 2 2
+--sym-files 1 8
+--sym-stdin 8
+--sym-stdout
+\end{lstlisting}
+}
+\end{spacing}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{|c|cccc|c|} 
+\hline
+Application               & \multicolumn{1}{c|}{Mode} & \multicolumn{1}{c|}{Average} & \multicolumn{1}{c|}{Max} & Min      & Reduce                    \\ 
+\hline
+\multirow{2}{*}{test ([)}        & Async                     & 233.36                       & 337.32                   & 173.26   & \multirow{2}{*}{21.92\%}  \\
+                          & Sync                      & 298.88                       & 394.55                   & 253.24   &                           \\ 
+\hline
+\multirow{2}{*}{basename} & Async                     & 83.60                        & 84.71                    & 82.78    & \multirow{2}{*}{75.61\%}  \\
+                          & Sync                      & 342.73                       & 344.42                   & 340.14   &                           \\ 
+\hline
+\multirow{2}{*}{chmod}    & Async                     & 230.31                       & 242.91                   & 225.66    & \multirow{2}{*}{62.30\%}  \\
+                          & Sync                      & 610.96                       & 614.24                   & 607.92   &                           \\ 
+\hline
+\multirow{2}{*}{arch}     & Async                     & 1382.86                      & 1392.90                  & 1373.03  & \multirow{2}{*}{63.59\%}  \\
+                          & Sync                      & 3797.66                      & 3901.401                 & 3753.34  &                           \\ 
+\hline
+\multirow{2}{*}{chgrp}    & Async                     & 243.45                       & 248.22                   & 237.51   & \multirow{2}{*}{61.75\%}  \\
+                          & Sync                      & 636.55                       & 640.208                  & 633.094  &                           \\ 
+\hline
+\multirow{2}{*}{ls}       & Async                     & 1913.09                      & 1943.21                  & 1879.83  & \multirow{2}{*}{20.50\%}  \\
+                          & Sync                      & 2406.32                      & 2409.52                  & 2403.307 &                           \\
+\hline
+\end{tabular}
+\caption{Result of Comparing Async and Sync (unit: second)}
+\label{result_compare}
+\end{table}
+
+In this experiment, it is evident that the asynchronous mode can improve the path exploration time significantly. The average time for \texttt{[} was reduced from 298.88 seconds to 233.36 seconds. It shortened the exploration by 21.92\%. For \texttt{basename} and \texttt{chmod}, the average exploration time is shortened by 75.61\% and 63.59\% respectively. \texttt{chgrp} was improved 61.75\%, and \texttt{ls} was enhanced 20.50\%
+
+In conclusion, original KLEE spend most of its time on I/O, writing the testcases to hard drive, and waiting. With the help of the asynchronous mode, the exploration time can be shortened. The \textbf{Hypothesis 1} holds.
+
+\section{PoC of Share-Cache Solver}
+
+The prove of concept of the Share-Cache Solver runs in the following settings. The target binary is from GNU \texttt{Coreutils} package. The symbolic arguments remain the same as the previous experiment. Each of the application will be run twice. The solver will be terminated (cache clear) for every program. The purpose of the first run of each binary is ``building cache map.'' The second run of each binary is checking if the solver use caches to generate testcases. The solver will not be terminated between the first and second run of the same binary. The result of this experiment is shown in Table \ref{poc_table}.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{|c|c|c|} 
+\hline
+Application & CEx Generated (1st run) & CEx Generated (2nd run)  \\ 
+\hline
+test ([)           & 517        & 0                                     \\ 
+\hline
+arch        & 294        & 0                                     \\ 
+\hline
+chgrp       & 190        & 0                                     \\ 
+\hline
+chmod       & 285        & 0                                     \\ 
+\hline
+chcon       & 189        & 0                                     \\ 
+\hline
+base64      & 133        & 0                                     \\ 
+\hline
+basename    & 300        & 0                                     \\
+\hline
+\end{tabular}
+\caption{Number of Counter Examples Generated}
+\label{poc_table}
+\end{table}
+
+As shown in the result, the second run will not generate any counterexamples because the first run has already built the cache. All the queries sent during the second run are exactly the same as the first run. Therefore, there is no cache missed during the second run. In other words, two runs of each program shared cache with each other. The experiment also indicates that solver the cache can help reduce the workload of the solver, and cache can be used in two different runs.
+
+\section{Share-cache Solver Analyzing Binary}
+In this section, I will use the asynchronous KLEE to analyze some binaries in GNU \texttt{Coreutils} package. First, I will run each binary for one time to collect the number of counterexamples generated as well as the solving and cache lookup time. The Share-cache solver will be terminated between each run. Then I will run those applications together. At this time, the Share-cache solver will not be terminated. The purpose of this experiment is to check if the cache can be used between different program. The target binaries are \texttt{[}, \texttt{arch}, \texttt{base64}, \texttt{basename}, \texttt{chcon}, \texttt{chgrp}, and \texttt{chmod}. 
+
+These binaries will be executed in the following order: 1. \texttt{[} 2. \texttt{arch} 3. \texttt{basename} 4. \texttt{base64} 5. \texttt{chcon} 6. \texttt{chgrp} 7. \texttt{chmod}
+
+Table \ref{single_run} shows the solving time, cache lookup time and number of counterexamples generated during single execution. Table \ref{combine_run} shows the result of analyzing the target binaries without terminating the shared-cache solver.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{cccccc}
+\hline
+\multicolumn{1}{|c|}{Application} & \multicolumn{1}{c|}{Queries} & \multicolumn{1}{c|}{Caching Time} & \multicolumn{1}{c|}{Solving Time} & \multicolumn{1}{c|}{Overall Time} & \multicolumn{1}{c|}{Num. Cex} \\
+\hline
+\multicolumn{1}{|c|}{{test ([)}}      & \multicolumn{1}{c|}{1788}  & \multicolumn{1}{c|}{2.87}   & \multicolumn{1}{c|}{10.19} & \multicolumn{1}{c|}{13.06}  & \multicolumn{1}{c|}{517} \\ \hline
+\multicolumn{1}{|c|}{arch}     & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{971.27} & \multicolumn{1}{c|}{0.88}  & \multicolumn{1}{c|}{972.15} & \multicolumn{1}{c|}{294} \\ \hline
+\multicolumn{1}{|c|}{base64}   & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{42.38}  & \multicolumn{1}{c|}{1.08}  & \multicolumn{1}{c|}{43.46}  & \multicolumn{1}{c|}{133} \\ \hline
+\multicolumn{1}{|c|}{basename} & \multicolumn{1}{c|}{14071} & \multicolumn{1}{c|}{3.38}   & \multicolumn{1}{c|}{0.56}  & \multicolumn{1}{c|}{3.94}   & \multicolumn{1}{c|}{300} \\ \hline
+\multicolumn{1}{|c|}{chcon}    & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{11.42}  & \multicolumn{1}{c|}{1.00}  & \multicolumn{1}{c|}{12.42}  & \multicolumn{1}{c|}{189} \\ \hline
+\multicolumn{1}{|c|}{chgrp}    & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{14.74}  & \multicolumn{1}{c|}{1.61}  & \multicolumn{1}{c|}{16.35}  & \multicolumn{1}{c|}{190} \\ \hline
+\multicolumn{1}{|c|}{chmod}    & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{10.91}  & \multicolumn{1}{c|}{1.07}  & \multicolumn{1}{c|}{11.98}  & \multicolumn{1}{c|}{285} \\ \hline
+Total                          &                            & 1056.97                 & 16.40                  & 1073.36                 & 1908                    
+\end{tabular}
+\caption{Caching and Solving Time For Analyzing a Single Binary (unit: second)}
+\label{single_run}
+
+\vspace{2cm}
+
+\begin{tabular}{cccccc}
+\hline
+\multicolumn{1}{|c|}{Application} & \multicolumn{1}{c|}{Queries} & \multicolumn{1}{c|}{Caching Time} & \multicolumn{1}{c|}{Solving Time} & \multicolumn{1}{c|}{Overall Time} & \multicolumn{1}{c|}{Num. Cex} \\ \hline
+\multicolumn{1}{|c|}{{test ([)}}      & \multicolumn{1}{c|}{1788}  & \multicolumn{1}{c|}{2.88}    & \multicolumn{1}{c|}{10.23} & \multicolumn{1}{c|}{13.11}   & \multicolumn{1}{c|}{518} \\ \hline
+\multicolumn{1}{|c|}{arch}     & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{3189.86} & \multicolumn{1}{c|}{0.43}  & \multicolumn{1}{c|}{3190.29} & \multicolumn{1}{c|}{75}  \\ \hline
+\multicolumn{1}{|c|}{basename} & \multicolumn{1}{c|}{14071} & \multicolumn{1}{c|}{6.71}    & \multicolumn{1}{c|}{0.23}  & \multicolumn{1}{c|}{6.94}    & \multicolumn{1}{c|}{98}  \\ \hline
+\multicolumn{1}{|c|}{base64}   & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{38.77}   & \multicolumn{1}{c|}{0.77}  & \multicolumn{1}{c|}{39.54}   & \multicolumn{1}{c|}{71}  \\ \hline
+\multicolumn{1}{|c|}{chcon}    & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{9.11}    & \multicolumn{1}{c|}{0.05}  & \multicolumn{1}{c|}{9.16}    & \multicolumn{1}{c|}{98}  \\ \hline
+\multicolumn{1}{|c|}{chgrp}    & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{16.75}   & \multicolumn{1}{c|}{0.22}  & \multicolumn{1}{c|}{16.97}   & \multicolumn{1}{c|}{50}  \\ \hline
+\multicolumn{1}{|c|}{chmod}    & \multicolumn{1}{c|}{20000} & \multicolumn{1}{c|}{9.21}    & \multicolumn{1}{c|}{0.05}  & \multicolumn{1}{c|}{9.26}    & \multicolumn{1}{c|}{86}  \\ \hline
+Total                          &                            & 3273.28                      & 11.98                      & 3285.26                      & 996
+\end{tabular}
+\caption{Caching and Solving Time For Analyzing 7 Binaries (unit: second)}
+\label{combine_run}
+\end{table}
+
+Without the cross-binary cache share solver, the total number of testcases generated by the solver is 1,908 for analyzing all these seven target binaries. With the cross-binary cache share solver, this number reduced from 1,908 to 996. That's a 47.83\% reduction. With such reduction in the number of counterexamples generated by the solver, the solving time (time that spend in STP/Z3 solver) dropped from 16.40 seconds to 11.98 seconds. The cross-binary shared-cache solver spends 26.95\% less time in STP/Z3.
+
+Cache lookup time get hurts from the increase of cache map size because of the cache look up mechanism. The solver follows the following cache lookup policy. First, check if the expression exists in the cache map. If yes, then it is a direct cache hit. If not, iterate through the cache map, try all of the answers to see if any of these solutions fit the expression. If yes, then it is an indirect cache hit. Otherwise, it is a cache miss. The worst case of time complexity for the strategy of cache look up is $O(n)$ since the solver needs to iterate through the whole map to see if there is any answer satisfies the expression if there is no direct hit. Due to the increase of cache size, the cache map size will go up. As we can see, these binaries more or less have indirect hits, therefore the cache look up takes longer. 
+
+If the remote solver does not allow the indirect cache hit, the number of counterexample will increase a lot. Take the example of \texttt{arch}, the time for solving indirect hits using STP/Z3 takes longer than the current situation (first 7000 testcase spends around 1500 seconds in STP/Z3, about 21 second in cache lookup). So there is a trade off here. Allowing indirect hits will cause increase of the cache lookup time but decrease the number of counterexamples generated. Disable indirect cache hit will cause the number of counterexamples and the time for solving those indirect hits in STP/Z3 probably takes longer.
+
+\section{Cache Strategy Improvement}
+As the result shown above, current caching strategy is not that perfect. Therefore, a new strategy has been added to the remote constraints solver, that is let the solver race with the cache lookup.
+
+In the original implementation, once the remote constraint solver receive the kquery, it will start lookup the cache in the cache pool. The original caching look up strategy has two steps. First check if there is a direct cache hit. Second, if there is no direct cache hit，try all the result in cache pool to see if any result meets the constraints. Therefore, the worst situation for cache lookup is $O(n)$. With more and more cache gets into the cache pool, this time will increase.
+
+Moreover, in reality, some cache lookup time will slower than solve the constraints directly. Therefore, in this improved cache lookup strategy, the remote solver have multithreads. One of them is responsible for cache lookup, and the other one is responsible for solve the query directly. And the solver will return the result whoever comes back first. 
+
+When testing the \texttt{gnu util} package, the average time form solving a query is 0.01 seconds, and the average time for solving query directly is 0.002 second. Under this strategy, the expensive ``indirect cache`` strategy is abandoned since solving the query is much faster than finding a indirect cache hit. 

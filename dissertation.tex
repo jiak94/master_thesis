@@ -1,0 +1,192 @@
+% UGA Dissertation Template
+% Changes to official template by Kyle Krafka (December 2015)
+
+\documentclass[12pt,notitlepage]{report}  % The notitlepage option prevents \maketitle from resetting page numbering, below.
+\usepackage{kyle}
+\usepackage{fullpage}
+\usepackage{listings}
+\usepackage{setspace}\doublespacing
+\textfloatsep 0.75in
+\usepackage[nottoc]{tocbibind}  % Added nottoc option to remove "Contents"
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{wrapfig}
+\usepackage[hidelinks]{hyperref}  % Allows you to click on references in the PDF.
+\usepackage[square]{natbib}  % Use name/year for citations rather than numbers.
+\usepackage{amsmath}
+% \usepackage{MinionPro}  % Serif font.
+% \usepackage{MyriadPro}  % Sans-serif font.
+\usepackage{pgfornament}  % For the ornament, used on the dedication page.
+\newtheorem{hyp}{Hypothesis}
+\usepackage{multirow}
+\usepackage{color}
+\usepackage{url}
+\renewcommand{\lstlistingname}{Snippet}
+\renewcommand\lstlistlistingname{List of Code Snippet}
+% \usepackage{longtable}
+% This makes for a larger left margin so that when you bind your dissertation,
+% the text stays away from the binding. From what I have seen, people typically
+% have it bound single-sided (i.e., the back of each page is blank), but if you
+% want it double-sided, use the "twoside" option right before or after the
+% "bindingoffset" option here (with a comma). The choice of 6 mm was mostly
+% arbitrary, but The Graduate School recommended anywhere from 0 to 0.5 inches
+% of binding offset on top of the 1 in left margin.
+\usepackage[bindingoffset=6mm]{geometry}
+\usepackage[toc]{appendix}  % Allows for an appendix, which should appear in the table of contents.
+\usepackage[english]{babel}
+\usepackage{lipsum}  % Generates dummy text
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{ %
+    columns=fixed,
+    % basicstyle=\footnotesize\ttfamily,
+    numbers=left,                                        % 在左侧显示行号
+    frame=none,                                          % 不显示背景边框
+    backgroundcolor=\color[RGB]{245,245,244},            % 设定背景颜色
+    keywordstyle=\color[RGB]{40,40,255},                 % 设定关键字颜色
+    numberstyle=\footnotesize,           % 设定行号格式
+    commentstyle=\it\color[RGB]{0,96,96},                % 设置代码注释的格式
+    stringstyle=\rmfamily\slshape\color[RGB]{128,0,0},   % 设置字符串格式
+    showstringspaces=false,                              % 不显示字符串中的空格
+    language=C++,                                        % 设置语言
+    xleftmargin=2em,
+    xrightmargin=2em,
+    aboveskip=2em,
+    belowskip=2em,
+    upquote=true,
+    literate = {-}{-}1,
+}
+
+% Title
+\newcommand{\dissertationtitle}{STANDALONE CONSTRAINT SOLVER FOR ASYNCHRONOUS SYMBOLICEXECUTION}
+\newcommand{\whoami}{Jiakuan Li}
+
+\setcounter{tocdepth}{1}
+
+\begin{document}
+
+% Make the official abstract page
+\newpage
+\thispagestyle{empty}
+\vspace*{18pt}
+\begin{center}
+\textsc{\large{\dissertationtitle}}\\[18pt]  % A little larger than the original template
+by\\[18pt]
+\textsc{\whoami}\\[12pt]
+(Under the Direction of Kang Li)\\[12pt]
+\textsc{Abstract}
+\end{center}
+Symbolic execution is a technique to analyze a binary. It symbolizes the input of a program and try to generate testcases that covered all of the feasible path. The constraint solver is one of the indispensable and the most critical components in a symbolic execution engine. All of the symbolic execution engines rely on solvers to conduct testcases and guide the exploration during the operation process. Currently, and engine regularly spends comparatively long time solving the constraints. To shorten the time for analyzing a binary, using a standalone solver is one of the practical strategies. In my research, I implemented a standalone solver that takes in kquery strings and generating testcases according to the constraints in that kquery it receives. Moreover, to improve the performance of the solver, the solver now can share caches.
+\thispagestyle{empty}
+
+\begin{list}{\textsc{Index words:\hfill}}{\labelwidth 1.2in\leftmargin 1.4in\labelsep 0.2in}
+\item 
+\begin{flushleft}\singlespacing
+KLEE,
+Symbolic Execution,
+Constraint Solver
+\end{flushleft}
+\end{list}
+
+% Make the official title page
+\newpage
+\pagenumbering{roman}
+\thispagestyle{empty}
+\vspace*{18pt}
+\begin{center}
+\textsc{\large{\dissertationtitle}}\\[18pt]
+by\\[18pt]
+\textsc{\whoami}\\[12pt]
+B.S., University of Georgia, 2016\\
+\vfill
+A Dissertation Submitted to the Graduate Faculty \\
+of The University of Georgia in Partial Fulfillment \\
+of the \\
+Requirements for the Degree \\[10pt]
+\textsc{Master of Science}\\[36pt]
+\textsc{Athens, Georgia}\\[18pt]
+2018
+\end{center}
+
+% Make the copyright page
+\newpage
+\thispagestyle{empty}
+\vspace*{5.5in}
+\begin{center}
+\copyright 2018 \\
+\whoami \\
+All Rights Reserved
+\end{center}
+
+% Make the approval page
+\newpage
+\thispagestyle{empty}
+\vspace*{18pt}
+\begin{center}
+\textsc{\large{\dissertationtitle}}\\[18pt]
+by\\[18pt]
+\textsc{\whoami}
+\end{center}
+\vfill
+\begin{flushleft}\singlespacing
+\hskip 200pt {Approved:}\\
+\vskip 12pt
+
+% If you have two major professors, change "Professor" to "Professors."
+\hspace*{200pt}\makebox[100pt][l]{Major Professor:}Kang Li\\
+\vskip 12pt
+% Committee (use as many lines as needed)
+\hspace*{200pt}\makebox[100pt][l]{Committee:       }Kyu H. Lee\\
+\hspace*{200pt}\makebox[100pt][l]{~                }Maria Hybinette\\
+% Approval words
+\vfill
+Electronic Version Approved:\\[12pt]
+Suzanne Barbour\\
+Dean of the Graduate School\\
+The University of Georgia\\
+August 2018
+\end{flushleft}
+
+% This title page is not in the style manual, but it is in the original template.
+\title{\textbf{\dissertationtitle}}
+\author{\whoami}
+\date{August 2018}
+\maketitle
+\thispagestyle{empty}
+
+\newpage
+\vspace*{1.5in}
+\begin{center}
+\emph{For My Parents}\\
+\vspace{1cm}
+\pgfornament[width = 4cm,
+             color = black]{88}  % Feel free to download the pgfornament manual to choose your own ornament.
+\end{center}
+
+\input{acknowledgments}
+
+\tableofcontents
+\listoffigures  % If any.
+\listoftables % If any.
+\lstlistoflistings
+\clearpage
+\pagenumbering{arabic}
+
+% Chapters. Organize and name as you wish, as long as these refer to files that exist.
+\input{Chapter1}
+\input{Chapter2}
+\input{Chapter3}
+\input{Chapter4}
+\input{Chapter5}
+
+% \begin{appendices}
+% 	\input{extended_results}
+% \end{appendices}
+
+\newpage
+\bibliographystyle{plainnat}
+\bibliography{dissertation}
+
+\end{document}
